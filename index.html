@@ -1,40 +1,136 @@
+
 <style>
-body, html, div {
+body, html, main {
     margin: 0;
     padding: 0;
     overflow: hidden;
-    background: #222;
-}
-div#divs {
-    display: grid;
-    grid-template-columns: repeat(100, minmax(2px, 1fr));
-    width: 100vw;
-    height: 100vh;
-    touch-action: none;
+    background: #181818;
+	height: 100%;
 }
 
-div#divs div {
-    background: #222;
+body, button, input {
+	font-size: 1rem;
+	font-family: sans-serif;
+}
+
+main {
+	display: flex;
+	flex-direction: column;
+}
+
+#c {
+	position: absolute;
+	left: 0;
+	top: 0;
+	width: 100%;
+	height: 100%;
+	image-rendering: pixelated;
+}
+.top {
+	color: white;
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	user-select: none;
+}
+.group {
+	display: flex;
+	align-items: center;
+}
+.rest {
+	position: relative;
+	flex-grow: 1;
+}
+#color {
+	padding: 0;
+	background:white;
+	border: 0 solid white;
+}
+input {
+	background: black;
+	color:white;
+	border: 2px solid white;
+	
 }
 </style>
 
-<div id=divs>
-    <!-- Divs appear here dynamicaly -->
-</div>
+<main>
+	<div class="top">
+		<span class="group">
+			<label for="color">Color</label>
+			<input id="color" type="color" value="#ffff00">
+			<button id="get-randomcolor">Random</button>
+		</span>
+		
+		<span class="group">
+			<label for="rainbow">Rainbow</label>
+			<input id="rainbow" type="checkbox">
+		</span>
+		
+		<span class="group">
+			<label for="rainbow-speed">rainbow speed</label>
+			<input id="rainbow-speed" type="range" value="2" min="1" max="20" step="1">
+		</span>
+		
+		<span class="group">
+			<label for="size">Size</label>
+			<input id="size" type="number" value="1" min="1" max="9" step="1" size="3">
+		</span>
+	</div>
+	<div class="rest">
+		<canvas id="c" width="100" height="100"></canvas>
+	</div>
+</main>
+
+<!-- <div id=divs>
+</div> -->
 
 <script src=pubnub.js></script>
 <script>
-const userId  = `userId-${Math.random()}.${Math.random()}`;
-const channel = 'one-million-divs';
-const pubnub  = PubNub({userId: userId});
-const divs    = document.getElementById("divs");
-const color   = `#${rngHex()}${rngHex()}${rngHex()}`;
-const qsCache = {};
 
-function rngHex() {
-    return (Math.ceil(Math.random()*128)+127).toString(16);
+const canvas_width = 100
+const canvas_height = 100
+c.width = canvas_width
+c.height = canvas_height
+
+const randomR = Math.random()
+let theColor
+
+
+const colorInput = $('#color')
+setRandomColor()
+$('#get-randomcolor').addEventListener('click', setRandomColor)
+colorInput.addEventListener('input', function() {
+	theColor = color.value
+})
+
+let rainbowMode = false
+let rainbowIndex = 0
+let rainbowCol = [255,0,0]
+let rainbowChangeSpeed = 2
+const rainbowInput = $('#rainbow')
+rainbowInput.addEventListener('input', function() {
+	rainbowMode = rainbowInput.checked
+})
+
+const rainbowSpeedInput = $('#rainbow-speed')
+rainbowSpeedInput.addEventListener('input', function() {
+	rainbowChangeSpeed = Number(rainbowSpeedInput.value)
+})
+
+function setRandomColor() {
+	theColor = randomColor()
+	colorInput.value = theColor
 }
 
+const sizeInput = $('#size')
+
+const ctx = c.getContext('2d')
+
+
+const userId  = `userId-${Math.random()}.${Math.random()}`
+const channel = 'one-million-divs';
+const pubnub  = PubNub({userId: userId})
 function broadcast(index, color) {
     pubnub.publish({
         channel : channel,
@@ -42,58 +138,212 @@ function broadcast(index, color) {
             index : index,
             color : color,
         },
-    });
+    })
 }
+
+
+let drawBool = false
+function ondown(event) {
+	drawBool = true
+	draw(event)
+}
+function onup() {
+	drawBool = false
+}
+
+let prevX = -1
+let prevY = -1
+function draw(event) {
+	if(!drawBool) {
+		return
+	}
+	
+	let drawColor = theColor
+	if(rainbowMode) {
+		changeRainbowColor()
+		drawColor = rgb2hex(rainbowCol)
+	}
+	
+	const bounds = c.getBoundingClientRect()
+	const x = event.clientX - bounds.x
+	const y = event.clientY - bounds.y
+	
+	const width  = bounds.width
+	const height = bounds.height
+	
+	const widthPercentage  = clamp(x / width,  0, 0.999)
+	const heightPercentage = clamp(y / height, 0, 0.9999)
+	
+	const base_xCell = Math.floor(widthPercentage * canvas_width)
+	const base_yCell = Math.floor(heightPercentage * canvas_height)
+	
+	if(
+		base_xCell == prevX && 
+		base_yCell == prevY
+	) {
+		return
+	}
+	
+	const drawSize = Number(sizeInput.value)
+	
+	for(let yIndex = 0; yIndex < drawSize; yIndex++) {
+		for(let xIndex = 0; xIndex < drawSize; xIndex++) {
+			const x = base_xCell + xIndex
+			const y = base_yCell + yIndex
+			const index = canvas_height * y + x
+			broadcast(index, drawColor)
+			colorize(index, drawColor)
+		}
+	}
+	
+	prevX = base_xCell
+	prevY = base_xCell
+    return false
+}
+
+function clamp(num, min, max) {
+	if(num < min) {
+		num = min
+	}
+	if(num > max) {
+		num = max
+	}
+	return num
+}
+
 pubnub.subscribe({
     channel: channel,
-    messages: (msg) =>
-        colorize(msg.index, msg.color),
-});
-
-let lastIndex = -1;
-function motion(event) {
-    event.preventDefault();
-    //event.stopImmediatePropagation();
-    const index = getIndex(event);
-
-    // Prevent dupliate transmissions
-    if (lastIndex == index) return false;
-    lastIndex = index;
-
-    // Transmit and colorize locally
-    broadcast(index, color);
-    colorize(index, color);
-    return true;
-}
-
-function queryDiv(index) {
-    if (index in qsCache) return qsCache[index];
-    const target = document.querySelector(`div[i="${index}"]`);
-    qsCache[index] = target;
-    return target;
-}
+    messages: (msgOrMsgs) => {
+		if(!Array.isArray(msgOrMsgs)) {
+			msgOrMsgs = [msgOrMsgs]
+		}
+		for(const msg of msgOrMsgs) {
+			colorize(msg.index, msg.color)
+		}
+	}
+		
+})
 
 function colorize(index, color) {
-    const target = document.querySelector(`div[i="${index}"]`);
-    target.style.backgroundColor = color;
+	if(isNaN(index)) {
+		return
+	}
+	
+	if(color == null) {
+		color = '#ffffff'
+	}
+	
+	const x = index % canvas_height
+	const y = Math.floor(index / canvas_height)
+	
+	ctx.fillStyle = color
+	ctx.fillRect(x, y, 1, 1)
 }
 
-function getIndex(event) {
-    const target = event.target;
-    return +target.getAttribute('i');
+c.addEventListener('pointerdown', ondown)
+c.addEventListener('pointerup', onup)
+c.addEventListener('pointermove', draw)
+
+function $(selector, rootNode=document) {
+	return rootNode.querySelector(selector)
 }
 
-let divOffest = 0;
-function addMoreDivs(count=10000) {
-    for(let i = 0; i<count; i++) {
-        let div = document.createElement('div');
-        div.setAttribute('i', divOffest +  i);
-        divs.appendChild(div);
-    }
+// change the rainbow color.
+// there are 6 modes it can be in.
+// these are determined by the color itself.
+function changeRainbowColor() {
+	let [r,g,b] = rainbowCol
+	
+	// 1. determine the mode index based on the current values of r, g and b
+	const rFull = r == 255
+	const gFull = g == 255
+	const bFull = b == 255
+	
+	const rEmpty = r == 0
+	const gEmpty = g == 0
+	const bEmpty = b == 0
+	
+	if(rFull && gEmpty && bEmpty) {
+		rainbowIndex = 0
+	} else
+	if(rFull && gFull && bEmpty) {
+		rainbowIndex = 1
+	} else
+	if(rEmpty && gFull && bEmpty) {
+		rainbowIndex = 2
+	} else
+	if(rEmpty && gFull && bFull) {
+		rainbowIndex = 3
+	} else 
+	if(rEmpty && gEmpty && bFull) {
+		rainbowIndex = 4
+	} else
+	if(rFull && gEmpty && bFull) {
+		rainbowIndex = 5
+	}
+	
+	if(rainbowIndex == 0) {
+		g += rainbowChangeSpeed
+	} else
+	if(rainbowIndex == 1) {
+		r -= rainbowChangeSpeed
+	} else
+	if(rainbowIndex == 2) {
+		b += rainbowChangeSpeed
+	} else
+	if(rainbowIndex == 3) {
+		g -= rainbowChangeSpeed
+	} else
+	if(rainbowIndex == 4) {
+		r += rainbowChangeSpeed
+	} else
+	if(rainbowIndex == 5) {
+		b -= rainbowChangeSpeed
+	}
+	
+	r = clamp(r, 0, 255)
+	g = clamp(g, 0, 255)
+	b = clamp(b, 0, 255)
+	
+	rainbowCol = [r,g,b]
 }
-addMoreDivs();
 
-//divs.addEventListener('pointerdown', motion);
-divs.addEventListener('pointermove', motion);
+function rgb2hex(rgbArr) {
+	let hex = "#"
+	for(let i = 0; i < 3; i++) {
+		hex += rgbArr[i].toString("16").padStart(2, 0)
+	}
+	
+	return hex
+}
+
+
+function randomColor() {
+	const r = Math.floor(100 + Math.random() * 156)
+	const g = Math.floor(100 + Math.random() * 156)
+	const b = Math.floor(100 + Math.random() * 156)
+	return rgb2hex([r,g,b])
+}
+
+
+// test functionality of an array of messages.
+function testArrayMessage() {
+	const msgs = []
+	for(var i = 0; i < 100; i++) {
+		const msg = {
+			index: i,
+			color: randomColor()
+		}
+		msgs.push(msg)
+	}
+	
+	console.log('yay')
+	console.log(msgs)
+	
+	pubnub.publish({
+        channel : channel,
+        message : msgs,
+    })
+}
 
 </script>
