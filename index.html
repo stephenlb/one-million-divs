@@ -1,10 +1,10 @@
+<!-- TODO: add storage retrieval -->
 <!-- TODO: better caching -->
 <!-- TODO: screen clear?  -->
 <!-- TODO: color picker  -->
 <!-- TODO: more colorful  -->
 <!-- TODO: enable [] array of pixels -->
 <!-- TODO: update readme -->
-<!-- TODO: add storage retrieval -->
 <!-- TODO:  -->
 <!-- TODO:  -->
 <!-- TODO:  -->
@@ -41,28 +41,22 @@ div#divs div {
 
 <script src=pubnub.js></script>
 <script>
-const userId  = `userId-${Math.random()}.${Math.random()}`;
-const channel = 'one-million-divs';
-const pubnub  = PubNub({userId: userId});
-const divs    = document.getElementById("divs");
-const color   = `#${rngHex()}${rngHex()}${rngHex()}`;
-let cacheArr;
-const rainbowStep = 0.05
-
-
+const userId      = `userId-${Math.random()}.${Math.random()}`;
+const channel     = 'one-million-divs';
+const pubnub      = PubNub({userId: userId});
+const divs        = document.getElementById("divs");
+const cacheArr    = [];
+const rainbowStep = 0.05;
 
 function makeRainbow(rainbowStep) {
     let t = 0;
     return function () {
         t += rainbowStep;
-
         const r = Math.sin(t) * 127 + 128;
         const g = Math.sin(t + 2 * Math.PI / 3) * 127 + 128;
         const b = Math.sin(t + 4 * Math.PI / 3) * 127 + 128;
 
-        return (
-            `#${Math.round(r).toString(16).padStart(2, "0")}${Math.round(g).toString(16).padStart(2, "0")}${Math.round(b).toString(16).padStart(2, "0")}`
-        );
+        return `#${Math.round(r).toString(16).padStart(2, "0")}${Math.round(g).toString(16).padStart(2, "0")}${Math.round(b).toString(16).padStart(2, "0")}`;
     };
 }
 const nextColor = makeRainbow(rainbowStep);
@@ -81,10 +75,17 @@ function broadcast(index, color) {
         },
     });
 }
+function receiver(messages) {
+    if (!Array.isArray(messages))
+        messages = [messages];
+    messages.forEach( msg => 
+        colorize(msg.index, msg.color)
+    );
+}
+
 pubnub.subscribe({
     channel: channel,
-    messages: (msg) =>
-        colorize(msg.index, msg.color),
+    messages: receiver,
 });
 
 let lastIndex = -1;
@@ -99,7 +100,7 @@ function motion(event) {
     if (lastIndex == index) return false;
     lastIndex = index;
 
-    const color = nextColor()
+    const color = nextColor();
 
     // Transmit and colorize locally
     broadcast(index, color);
@@ -125,7 +126,7 @@ function addMoreDivs(count=10000) {
         divs.appendChild(div);
     }
 
-    cacheArr = Array.from(divs.children);
+    cacheArr.push.apply(cacheArr, Array.from(divs.children));
 }
 addMoreDivs();
 
