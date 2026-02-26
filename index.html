@@ -46,7 +46,7 @@ const channel = 'one-million-divs';
 const pubnub  = PubNub({userId: userId});
 const divs    = document.getElementById("divs");
 const color   = `#${rngHex()}${rngHex()}${rngHex()}`;
-const qsCache = {};
+let cacheArr;
 const rainbowStep = 0.05
 
 
@@ -107,31 +107,25 @@ function motion(event) {
     return true;
 }
 
-function queryDiv(index) {
-    if (index in qsCache) return qsCache[index];
-    const target = document.querySelector(`div[i="${index}"]`);
-    qsCache[index] = target;
-    return target;
-}
 
 function colorize(index, color) {
-    const target = queryDiv(index);
+    const target = cacheArr[index];
     target.style.backgroundColor = color;
 }
 
 function getIndex(event) {
     const target = document.elementFromPoint(event.clientX, event.clientY);
-    if (!target || !target.hasAttribute('i')) return -1;
-    return +target.getAttribute('i');
+    return cacheArr.indexOf(target)
 }
 
 let divOffest = 0;
 function addMoreDivs(count=10000) {
     for(let i = 0; i<count; i++) {
         let div = document.createElement('div');
-        div.setAttribute('i', divOffest +  i);
         divs.appendChild(div);
     }
+
+    cacheArr = Array.from(divs.children);
 }
 addMoreDivs();
 
