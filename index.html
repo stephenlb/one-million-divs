@@ -1,9 +1,10 @@
-<!-- TODO: add storage retrieval -->
-<!-- TODO: better caching -->
+<!-- TODO: ON CLICK for DESKTOP -->
+<!-- TODO: ✅ add storage retrieval -->
+<!-- TODO: ✅ better caching -->
 <!-- TODO: screen clear?  -->
 <!-- TODO: color picker  -->
-<!-- TODO: more colorful  -->
-<!-- TODO: enable [] array of pixels -->
+<!-- TODO: ✅ more colorful  -->
+<!-- TODO: ✅ enable [] array of pixels -->
 <!-- TODO: update readme -->
 <!-- TODO:  -->
 <!-- TODO:  -->
@@ -47,6 +48,7 @@ const pubnub      = PubNub({userId: userId});
 const divs        = document.getElementById("divs");
 const cacheArr    = [];
 const rainbowStep = 0.05;
+let mouseDown     = false;
 
 function makeRainbow(rainbowStep) {
     let t = 0;
@@ -75,6 +77,7 @@ function broadcast(index, color) {
         },
     });
 }
+
 function receiver(messages) {
     if (!Array.isArray(messages))
         messages = [messages];
@@ -92,6 +95,11 @@ let lastIndex = -1;
 function motion(event) {
     event.preventDefault();
 
+    // Only paint pixels if user has click held down
+    if (event.type === 'pointerdown') mouseDown = true;
+    if (event.type === 'pointerup') mouseDown = false;
+    if (!mouseDown) return;
+
     // Get div index ID
     const index = getIndex(event);
     if (index < 0) return false;
@@ -107,7 +115,6 @@ function motion(event) {
     colorize(index, color);
     return true;
 }
-
 
 function colorize(index, color) {
     const target = cacheArr[index];
@@ -131,5 +138,22 @@ function addMoreDivs(count=10000) {
 addMoreDivs();
 
 divs.addEventListener('pointerdown', motion);
+divs.addEventListener('pointerup', motion);
 divs.addEventListener('pointermove', motion);
+
+function range(size) {
+    return [...Array(size).keys()];
+}
+
+// Load history
+let timetoken = 0;
+range(10).forEach( async (n) => {
+    let response = await pubnub.history({
+        channel: channel,
+        next: timetoken,
+    });
+    let events = response[0];
+    timetoken = response[2];
+    events.forEach(receiver);
+} );
 </script>
