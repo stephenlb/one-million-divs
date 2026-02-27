@@ -188,21 +188,22 @@ divs.addEventListener('pointerdown', motion);
 divs.addEventListener('pointerup', motion);
 divs.addEventListener('pointermove', motion);
 
-function range(size) {
-    return [...Array(size).keys()];
-}
-
 // Load history
-let timetoken = 0;
-range(10).forEach( async (n) => {
-    let response = await pubnub.history({
-        channel: channel,
-        next: timetoken,
-    });
-    let events = response[0];
-    timetoken = response[2];
-    events.forEach(receiver);
-} );
+(async () => {
+    let timetoken = 0;
+    for (let n = 0; n < 100; n++) {
+        let response = await pubnub.history({
+            channel: channel,
+            start: timetoken,
+            reverse: true,
+        });
+        if (!response) break;
+        let events = response[0];
+        if (!events || !events.length) break;
+        timetoken = response[2];
+        events.forEach(receiver);
+    }
+})();
 
 // Color Picker
 const colors = document.getElementById('colors');

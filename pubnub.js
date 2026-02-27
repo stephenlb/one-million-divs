@@ -150,10 +150,12 @@ const history = PubNub.history = async (setup={}) => {
     let uuid      = setup.userId       || PubNub.userId       || defaultUserId;
     let count     = setup.count        || 100;
     let start     = setup.start        || 0;
+    let reverse   = setup.reverse      || false;
     let uri       = `https://${origin}/v2/history/sub-key/${subkey}/channel/${channel}`;
     let params    = `count=${count}&auth=${authkey}&uuid=${uuid}`;
 
-    if (start) params += `&start=${start}`
+    if (start)   params += `&start=${start}`;
+    if (reverse) params += `&reverse=true`;
 
     try {
         let response = await fetch(`${uri}?${params}`);
