@@ -1,23 +1,24 @@
 # One Million Divs
 
-Lots of users changing the colors of each DIV
+> **Try it now:** https://stephenlb.github.io/one-million-divs/
 
-Vision - we display all divs all at once.
-We need to solve the slow part
+Lots of users changing the colors of each DIV in real-time.
 
-## Benchmark innerHTML vs DOM node minaipulation appendChild()
+- `index.html` — optimized experience (fewer divs)
+- `one-million-divs.html` — the full one million divs
 
-1. divs.innerHMTL += "more divs"
-2. divs.appendChild() - WINNER! 🎉🎉🎉🎉
+## Benchmark: innerHTML vs appendChild
 
-## Challenges:
+1. `divs.innerHTML += "more divs"`
+2. `divs.appendChild()` — WINNER!
 
- - ✅ too many divs to render ( make browser slow )
- - storage and retreival ( chunk the data 5K chunks ) 
- - compression ( bitmap binary MATHEMATICS )
+## Challenges
+
+- ✅ Too many divs to render (browser performance)
+- ✅ Storage and retrieval (chunked into 5K chunks)
+- Compression (bitmap binary)
 
 ## Features
 
- - ✅ color theme / colors
- - ✅ multi - user LIVE
- - ✅ multi user - so we can all modify each div bg color
+- ✅ Color theme / color picker
+- ✅ Multi-user live collaboration
