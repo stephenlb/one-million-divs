@@ -34,11 +34,57 @@ div#divs div {
     margin: -1px;
     background: #222;
 }
+
+/* color canvas */
+div#colors {
+    display: flex;
+    position: absolute;
+    top: 20px;
+    right: 20px;
+    min-width: 200px;
+    gap: 4px;
+    box-shadow: 1px 1px 20px rgba(0,0,0,0.3);
+    border: 2px solid rgba(255,255,255,0.1);
+    background: rgba(255,255,255,0.1);
+    padding: 8px;
+    border-radius: 16px;
+    backdrop-filter: blur(4px);
+}
+
+div#colors color {
+    flex: 1;
+    min-width: 30px;
+    min-height: 30px;
+    background-color: attr(hex type(<color>), red);
+    border-radius: 8px;
+    border: 2px solid rgba(255,255,255,0.2);
+    transition: all 150ms cubic-bezier(.2,0,0,1);
+}
+
+div#colors color:active {
+    scale: 1.4;
+}
+div#colors color.active {
+    border: 2px solid white;
+    box-shadow: 0 0 10px white;
+    transform: scale(1.1);
+}
 </style>
 
 <div id=divs>
     <!-- Divs appear here dynamicaly -->
 </div>
+
+<div id=colors>
+    <color hex=#ff0000 class=active></color>
+    <color hex=#00ff00></color>
+    <color hex=#0000ff></color>
+    <color hex=#ffff00></color>
+    <color hex=#00ffff></color>
+    <color hex=#ff00ff></color>
+    <color hex=#4a412a></color>
+</div>
+
 
 <script src=pubnub.js></script>
 <script>
@@ -49,6 +95,7 @@ const divs        = document.getElementById("divs");
 const cacheArr    = [];
 const rainbowStep = 0.05;
 let mouseDown     = false;
+let colorSelected = null;
 
 function makeRainbow(rainbowStep) {
     let t = 0;
@@ -108,7 +155,7 @@ function motion(event) {
     if (lastIndex == index) return false;
     lastIndex = index;
 
-    const color = nextColor();
+    const color = colorSelected ? colorSelected : nextColor();
 
     // Transmit and colorize locally
     broadcast(index, color);
@@ -156,4 +203,15 @@ range(10).forEach( async (n) => {
     timetoken = response[2];
     events.forEach(receiver);
 } );
+
+// Color Picker
+const colors = document.getElementById('colors');
+colors.addEventListener( 'click', (event) => {
+    const target = event.target;
+    const color = target.getAttribute('hex');
+    if (!color) return;
+    colorSelected = color;
+    document.querySelectorAll('#colors color').forEach(c => c.classList.remove('active'));
+    target.classList.add('active');
+});
 </script>
