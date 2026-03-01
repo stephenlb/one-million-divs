@@ -185,8 +185,12 @@ function addMoreDivs(count=10000) {
 addMoreDivs();
 
 divs.addEventListener('pointerdown', motion);
-divs.addEventListener('pointerup', motion);
 divs.addEventListener('pointermove', motion);
+
+// Make sure releasing the pointer outside the window can be detected
+window.addEventListener('pointerup', () => {
+    mouseDown = false;
+});
 
 // Load history
 (async () => {
